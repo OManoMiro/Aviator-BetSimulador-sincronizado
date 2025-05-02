@@ -1,0 +1,63 @@
+Import hashlib
+From datetime import datetime, timedelta
+Import pandas as pd
+Import streamlit as st
+
+# --- Dados reais de 10:34 como base ---
+Dados_reais_1034 = [
+    5.50, 14.41, 1.00, 1.02, 1.43, 9.86, 1.00, 1.55,
+    2.65, 1.03, 1.35, 6.78, 4.15, 3.99, 9.01, 1.03,
+    1.01, 5.43, 1.65, 1.03, 6.04, 3.24, 1.41, 4.78
+]
+
+# Função para gerar multiplicador determinístico com base na hora
+Def gerar_multiplicador(seed: str) -> float:
+    Hash_result = hashlib.sha256(seed.encode()).hexdigest()
+    H_int = int(hash_result[:13], 16)
+
+    If h_int % 33 == 0:
+        Return 1.00
+
+    Multiplicador = (100 * 1.0) / (100 – (h_int % 100))
+    Return round(multiplicador, 2)
+
+# Simular os próximos minutos com base na hora inicial
+Def simular_multiplicadores(hora_inicial_str, quantidade):
+    Hora_inicial = datetime.strptime(hora_inicial_str, “%Y-%m-%d %H:%M”)
+    Resultados = []
+
+    For I in range(quantidade):
+        Tempo = hora_inicial + timedelta(minutes=i)
+        Seed = f”bantubet_irreal_{tempo.strftime(‘%Y-%m-%d_%H:%M’)}”
+        Mult = gerar_multiplicador(seed)
+        Tipo = (
+            “SUPERPICO” if mult >= 50
+            Else “PICO” if mult >= 10
+            Else “CRASH” if mult == 1.00
+            Else “”
+        )
+        Resultados.append({
+            “Hora”: tempo.strftime(‘%H:%M’),
+            “Multiplicador”: mult,
+            “Tipo”: tipo,
+            “Seed”: seed
+        })
+
+    Return pd.DataFrame(resultados)
+
+# --- INTERFACE STREAMLIT ---
+St.title(“Simulador Bantubet Sincronizado com Dados Reais”)
+
+St.subheader(“Últimos 24 resultados capturados (10:34)”)
+St.write(dados_reais_1034)
+
+Hora_inicial = “2025-05-02 10:35”
+Quantidade = st.slider(“Simular próximos minutos a partir de 10:35”, 10, 200, 100)
+
+If st.button(“Simular Futuro”):
+    Df = simular_multiplicadores(hora_inicial, quantidade)
+    St.dataframe(df)
+
+    # Exportar CSV
+    Csv = df.to_csv(index=False).encode(‘utf-8’)
+    St.download_button(“Baixar como CSV”, csv, “previsao_multiplicadores.csv”, “text/csv”)
